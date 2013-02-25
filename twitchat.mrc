@@ -60,7 +60,14 @@ alias F7 {
 
     window -Bodaj[10]g[0]w[0]k[0] $+ %toggleolinter +L $+ %toggleoltb %olwintitle %twol.x %twol.y %twol.w %twol.h scripts/olpopup.txt
     setlayer %oltrans %olwintitle
-    updateviewerstimer
+    if (%twviewersol == 1) {
+      updateviewerstimer
+    }
+    if (%twviewerstxt == 1) {
+      if ($isproc(viewers2txt.exe) == $false) {
+        run -p $mircdir $+ scripts\viewers2txt.exe
+      }     
+    }
   }
 }
 
@@ -80,7 +87,7 @@ alias updateviewerstimer {
     timerupdateviewers off
   }
   if ($isproc(viewers2txt.exe) == $false) {
-    run -p $$mircdir $+ scripts\viewers2txt.exe
+    run -p $mircdir $+ scripts\viewers2txt.exe
     timerrunonce_viewers2txt 1 5 timerupdateviewers 0 2 updateviewers
   }
   else {
@@ -132,6 +139,15 @@ alias twad {
   }
   if ($1 == off) {
     timertwad off
+  }
+}
+
+alias twlastfm {
+  if ($1 == on) {
+    timerlastfm 0 8 nowplaying
+  }
+  if ($1 == off) {
+    timerlastfm off
   }
 }
 
@@ -187,41 +203,82 @@ alias isproc {
   }
 }
 
-alias nowplaying {
-  if ($sock(lastfm)) {  
-    .sockclose lastfm
+alias killprocess {
+  var %e = echo -ac info * /killprocess:
+  if ($version < 6.16) { %e snippet requires mIRC 6.16 or higher | return }
+  if ($1 !isnum 0-) || ($0 < 2) { %e <N> <process> with N zero or higher | return }
+  var %a = a $+ $ticks, %b = b $+ %a, %c
+  .comopen %a WbemScripting.SWbemLocator 
+  if ($comerr) { %e error connecting to WMI | return }
+  .comclose %a $com(%a,ConnectServer,1,dispatch* %b) 
+  if ($com(%b)) .comclose %b $com(%b,ExecQuery,1,bstr*,SELECT $&
+    Name FROM Win32_Process WHERE Name = $+(",$2-,"),dispatch* %a) 
+  if (!$com(%a)) { %e error retrieving collection | return }
+  %c = $comval(%a,0)
+  if (!%c) { %e no such process $2 | return }
+  if (!$1) {
+    while (%c) {
+      !.echo -q $comval(%a,%c,Terminate) 
+      dec %c 
+    } 
   }
-  if (%last.fm.username) {
-    sockopen lastfm www.last.fm 80
-    ;set -u10 %last.fm.active $active
-  }
-  else {
-    echo $active Error, no last.fm username found.  Please set your username use /lastfm username
-  }
+  else !.echo -q $comval(%a,$1,Terminate) 
+  :error
+  if ($com(%a)) .comclose %a
+  if ($com(%b)) .comclose %b
 }
 
-alias lastfm { set %last.fm.username $1 }
-
-on *:SOCKOPEN:lastfm: {
-  sockwrite -nt $sockname GET /user/ $+ %last.fm.username HTTP/1.1
-  sockwrite -nt $sockname Host: www.last.fm
-  sockwrite -nt $sockname $crlf
+alias lfmuser { 
+  set %last.fm.username $1 
+  echo -a last.fm username was set to: %last.fm.username
 }
-on *:SOCKREAD:lastfm: {
-  var %last.fm
-  sockread %last.fm
-  if (imageMedium isin %last.fm) {
-    sockread %last.fm | sockread %last.fm | sockread %last.fm
-    set %currentsong $regsubex(%last.fm,/(?:<(?:.*?)>)([^<]+)(?:<(?:.*?)>)(?:[^<]+)(?:<(?:.*?)>)([^<]+).+/,\2 - \1) ►♫
-    ;echo -a %currentsong
-    sockclose lastfm
-    if (!$exists(%nowplaying)) {
-      initfiles
-    }
-    write -l1 %nowplaying %currentsong
+
+alias -l lastfm { 
+  return $replace($1,&gt;,>,&lt;,<,&amp;,&) 
+}
+on *:sockread:lastfm*:{ 
+  tokenize 96 $sock($sockname).mark 
+  var %lf = $sockname
+  if ($sockerr) { 
+    $2 $me is having difficulty reading the data from last.fm! 
+    halt 
+  } 
+  sockread &lastfm 
+  if ($regex([ [ $4 ] ],/<error code="6">(.*)</error></lfm>)) { 
+    $2 $+($regml(1),!) 
+    halt 
+  }
+  elseif (nowplaying !isin [ [ $4 ] ]) { 
+    write -c %nowplaying no playing music right now ∎
+    sockclose %lf 
+  }
+  else { 
+    set %currentsong $& $lastfm($gettok($gettok([ [ $4 ] ],6,62),1,60))) - $+($& $lastfm($gettok($gettok([ [ $4 ] ],8,62),1,60))) ►♫
+    sockclose %lf
+    write -c %nowplaying %currentsong 
   }
 }
-
+}  
+on *:sockopen:lastfm*:{ 
+  tokenize 96 $sock($sockname).mark
+  if ($sockerr) { 
+    $2 $me is having difficulty connecting to lastfm's website! 
+    halt 
+  }
+  $5 GET $+(/2.0/?method=user.getrecenttracks&limit=1&user=,$1,&api_key=,$3) HTTP/1.1
+  $5 Host: $sock($sockname).addr 
+  $5 Connection: close 
+  $5
+}
+alias nowplaying { 
+  if (%last.fm.username == $null) {
+    echo -a Error, no last.fm username found.  Please set your username use: /lfmuser username
+    halt
+  }
+  var %lastfm $+(lastfm,$r(1,9999),$ticks,$network,$cid) 
+  $+(sock,$iif($sock(%lastfm),close,open)) %lastfm ws.audioscrobbler.com 80
+  sockmark %lastfm $+(%last.fm.username,`,$iif($isid,.describe $iif(#,#,$nick),echo -at *),`,6fa70647e42ed7b765e823047273352d,`,$!bvar(&lastfm,1-).text,`,sockwrite -nt %lastfm)
+}
 
 
 /*
@@ -229,7 +286,7 @@ on *:SOCKREAD:lastfm: {
 */
 
 ON *:START: { 
-  initfiles 
+  initfiles
 }
 
 on *:TEXT:*:%twchan: {
@@ -240,7 +297,7 @@ on *:TEXT:*:%twchan: {
     else {
       set %twol.line < $+ $nick $+ > $1-
     }
-    if (%writedisk == 1) {
+    if (%twchatstxt == 1) {
       newline
     }
     if ($window(%olwintitle)) {
@@ -254,7 +311,7 @@ on *:INPUT:%twchan: {
   if (%twownmsg == 1) {
     if ($left($1-,1) != / && $left($1-,1) != .) {
       set %twol.line << $+ $nick $+ >> $1-
-      if (%writedisk == 1) {
+      if (%twownmsgtxt == 1) {
         newline
       }
       if ($window(%olwintitle)) {
@@ -268,7 +325,7 @@ on *:INPUT:%olwintitle: {
   msg %twchan $1-
   if (%twownmsg == 1) {
     set %twol.line << $+ $nick $+ >> $1-
-    if (%writedisk == 1) {
+    if (%twownmsgtxt == 1) {
       newline
     }
     if ($window(%olwintitle)) {
@@ -280,7 +337,7 @@ on *:INPUT:%olwintitle: {
 on *:JOIN:%twchan: {
   if (%twjoins == 1) {
     set %twol.line + $nick has joined.
-    if (%writedisk == 1) {
+    if (%twjoinstxt == 1) {
       newline
     }
     if ($window(%olwintitle)) {
@@ -292,7 +349,7 @@ on *:JOIN:%twchan: {
 on *:PART:%twchan: {
   if (%twparts == 1) {
     set %twol.line - $nick has parted.
-    if (%writedisk == 1) {
+    if (%twpartstxt == 1) {
       newline
     }
     if ($window(%olwintitle)) {
@@ -304,7 +361,7 @@ on *:PART:%twchan: {
 on *:ACTION:*:%twchan: {
   if (%twact == 1) {
     set %twol.line * $nick $1-
-    if (%writedisk == 1) {
+    if (%twacttxt == 1) {
       newline
     }
     if ($window(%olwintitle)) {
@@ -316,6 +373,14 @@ on *:ACTION:*:%twchan: {
 on *:CONNECT {
   if ($server == tmi.twitch.tv) {
     join %twchan
+    if (%twlastfmtxt == 1) {
+      timerlastfm 0 8 nowplaying
+    }
+    if (%twviewerstxt == 1) {
+      if ($isproc(viewers2txt.exe) == $false) {
+        run -p $mircdir $+ scripts\viewers2txt.exe
+      }     
+    }
   }
 }
 
@@ -408,7 +473,7 @@ dialog twsettings {
   check "enable", 11, 227 140 60 20
   box "Auto Advertising", 16, 12 96 295 76
   box "twitch.tv", 17, 12 8 295 72
-  box "Overlay and Txt-Output Options", 5, 12 187 295 261
+  box "Overlay and Txt-Output Options", 5, 12 190 295 261
   text "-- Chats", 13, 168 232 50 16
   box "Txt-Output", 14, 87 212 67 196
   check "", 18, 114 230 22 20
@@ -424,11 +489,17 @@ dialog twsettings {
   check "", 33, 48 355 20 20
   text "-- Current Viewers, X-Split", 34, 168 357 128 18
   check "", 35, 114 380 19 20
-  text "-- last.fm current song", 36, 169 382 117 16
-  button "Flush TXTs", 37, 167 413 72 23
+  text "-- last.fm current song", 36, 169 382 117 18
+  button "Flush TXTs", 37, 167 417 72 23
   check "", 38, 114 355 19 20
-  edit "", 39, 127 415 26 21
-  text "# lines:", 40, 86 420 39 16
+  edit "", 39, 127 419 26 21
+  text "# lines:", 40, 86 424 39 16
+}
+
+
+on *:DIALOG:twsettings:sclick:18:{
+  if ($did(twsettings,18).state == 1) { set %twchatstxt 1 }
+  else { set %twchatstxt 0 }
 }
 
 on *:DIALOG:twsettings:sclick:6:{
@@ -441,15 +512,31 @@ on *:DIALOG:twsettings:sclick:7:{
   else { set %twownmsg 0 }
 }
 
+on *:DIALOG:twsettings:sclick:30:{
+  if ($did(twsettings,30).state == 1) { set %twownmsgtxt 1 }
+  else { set %twownmsgtxt 0 }
+}
+
 on *:DIALOG:twsettings:sclick:8:{
   if ($did(twsettings,8).state == 1) { set %twjoins 1 }
   else { set %twjoins 0 }
+}
+
+on *:DIALOG:twsettings:sclick:25:{
+  if ($did(twsettings,25).state == 1) { set %twjoinstxt 1 }
+  else { set %twjoinstxt 0 }
 }
 
 on *:DIALOG:twsettings:sclick:9:{
   if ($did(twsettings,9).state == 1) { set %twparts 1 }
   else { set %twparts 0 }
 }
+
+on *:DIALOG:twsettings:sclick:28:{
+  if ($did(twsettings,28).state == 1) { set %twpartstxt 1 }
+  else { set %twpartstxt 0 }
+}
+
 
 on *:DIALOG:twsettings:sclick:33:{
   if ($did(twsettings,33).state == 1) { 
@@ -463,8 +550,27 @@ on *:DIALOG:twsettings:sclick:33:{
 }
 
 on *:DIALOG:twsettings:sclick:38:{
-  if ($did(twsettings,38).state == 1) { set %twviewerstxt 1 }
-  else { set %twviewerstxt 0 }
+  if ($did(twsettings,38).state == 1) { 
+    set %twviewerstxt 1
+    if ($isproc(viewers2txt.exe) == $false) {
+      run -p $mircdir $+ scripts\viewers2txt.exe
+    } 
+  }
+  else {
+    set %twviewerstxt 0
+    killprocess 1 viewers2txt.exe
+  }
+}
+
+On *:DIALOG:twsettings:sclick:35:{
+  if ($did(twsettings,35).state == 1) {
+    set %twlastfmtxt 1
+    twlastfm on
+  }
+  else {
+    set %twlastfmtxt 0
+    twlastfm off
+  }
 }
 
 On *:DIALOG:twsettings:sclick:11:{
@@ -483,19 +589,27 @@ on *:DIALOG:twsettings:sclick:12:{
   else { set %twact 0 }
 }
 
-on *:DIALOG:twsettings:sclick:13:{
-  if ($did(twsettings,13).state == 1) {
-    set %writedisk 1
-    initfiles
-  }
-  else {
-    set %writedisk 0
-  }
+on *:DIALOG:twsettings:sclick:32:{
+  if ($did(twsettings,32).state == 1) { set %twacttxt 1 }
+  else { set %twacttxt 0 }
+}
+
+on *:DIALOG:twsettings:sclick:37:{
+  initfiles
 }
 
 on *:dialog:twsettings:edit:1: { 
   set %twuser $did(twsettings,1).text 
   set %twchan $chr(35) $+ %twuser
+}
+
+on *:dialog:twsettings:edit:39: { 
+  if ($did(twsettings,39).text !isnum) {
+    echo -a Error: Only numbers (lines) can be entered here.
+  }
+  else {
+    set %twtotallines $did(twsettings,39).text 
+  }
 }
 
 on *:dialog:twsettings:edit:3: { 
@@ -539,9 +653,14 @@ on *:dialog:twsettings:init:0: {
   if (%twaddelay == $null) {
     set %twaddelay 120
   }
+  if (%twtotallines == $null) {
+    set %twtotallines 5
+  }
+
   did -ra twsettings 1 %twuser
   did -ra twsettings 3 %twad
   did -ra twsettings 22 %twaddelay
+  did -ra twsettings 39 %twtotallines
   if (%twchats == 1) { did -c twsettings 6 }
   if (%twchats == 0) { did -u twsettings 6 }
   if (%twownmsg == 1) { did -c twsettings 7 }
@@ -564,6 +683,18 @@ on *:dialog:twsettings:init:0: {
     set %twviewerstxt 1
   }
   if (%twviewersol == 0) { did -u twsettings 33 }
+  if (%twchatstxt == 1) { did -c twsettings 18 }
+  if (%twchatstxt == 0) { did -u twsettings 18 }  
+  if (%twownmsgtxt == 1) { did -c twsettings 30 }
+  if (%twownmsgtxt == 0) { did -u twsettings 30 }
+  if (%twjoinstxt == 1) { did -c twsettings 25 }
+  if (%twjoinstxt == 0) { did -u twsettings 25 }
+  if (%twpartstxt == 1) { did -c twsettings 28 }
+  if (%twpartstxt == 0) { did -u twsettings 28 }
+  if (%twacttxt == 1) { did -c twsettings 32 }
+  if (%twacttxt == 0) { did -u twsettings 32 }
+  if (%twlastfmtxt == 1) { did -c twsettings 35 }
+  if (%twlastfmtxt == 0) { did -u twsettings 35 }    
 }
 
 alias twsettings { 
