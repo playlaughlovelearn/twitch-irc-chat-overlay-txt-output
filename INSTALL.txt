@@ -1,12 +1,17 @@
 -- Overview.
      My electric bill is already high enough and using a 2nd monitor just to screen capture twitch chat and interact with viewers seems like a waste either way. So I forced myself to use only 1 monitor and develop some tools that hopefully other streamers will find interesting.
      I'm the -do it once and do it right- kind of guy, so it took me quite of time but in the end I guess the script surpass my initial expectations and I guess is easy to setup. If you like my work:
-     * Optionally, you are welcome to invite me a beer.
-     * Forcebly, follow my twitch channel twitch.tv/gamerfamily
-     * Both :D
+  * Optionally, you are welcome to invite me a beer.
+  * Forcibly, follow my twitch channel twitch.tv/gamerfamily
+  * Both :D
 
 -- Instructions.
-1) Open mIRC and type: //run $mircdir/scripts
-2) Unzip the files (olpopup.txt & twitchat.mrc & viewers2txt.exe) inside that folder
-3) At mIRC type: /load -rs scripts/twitchat.mrc
-4) Click YES at the 'run initialization commands' warning popup and configure to your needs
+  #1 Open mIRC and type: //run $mircdir/scripts
+  #2 Unzip the files (olpopup.txt & twitchat.mrc & viewers2txt.exe) inside that folder.
+  #3 At mIRC type: /load -rs scripts/twitchat.mrc
+  #4 Click YES at the 'run initialization commands' warning popup and configure to your needs.
+
+-- Support.
+     Feel free to send me any issues, feedback or requests to bartoruiz at gmail
+
+http://i.imgur.com/vfv6gvV.png
