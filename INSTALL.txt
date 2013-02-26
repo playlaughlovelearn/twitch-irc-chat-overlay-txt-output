@@ -5,11 +5,15 @@
   * Forcibly, follow my twitch channel twitch.tv/gamerfamily
   * Both :D
 
--- Instructions.
+-- Install Instructions.
   #1 Open mIRC and type: //run $mircdir/scripts
   #2 Unzip the files (olpopup.txt & twitchat.mrc & viewers2txt.exe) inside that folder.
   #3 At mIRC type: /load -rs scripts/twitchat.mrc
   #4 Click YES at the 'run initialization commands' warning popup and configure to your needs.
+
+-- Update.
+  #1 Open mIRC and type: /unload -rs twitchat.mrc
+  #2 Follow the Install Instructions above
 
 -- Support.
      Feel free to send me any issues, feedback or requests to bartoruiz at gmail
