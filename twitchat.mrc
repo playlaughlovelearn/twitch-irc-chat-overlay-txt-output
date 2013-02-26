@@ -5,22 +5,9 @@ Twitch Chat mIRC Script
 By: bartoruiz (@gmail.com) ||  twitch.tv/gamerfamily
 Original Idea: PhiberOptik & Co.
 
+v 3.03
 
-- CHANGELOG
-
-ver 3.03
-- Commands that start with . or / won't display at overlay or txt-output
-- Auto clear chatline*.txt at every mirc startup.
-- Opens a new server window @connecting
-- last.fm current song txt-output every 10 secs: $mircdir/scritps/nowplaying.txt
-- Viewers count for Chat Overlay and txt-output; only works for X-Split since it grabs it from its window title: $mircdir/scritps/nowplaying.txt
-- Output the 5 lines to a single file: $mircdir/scripts/chatlines1-5.txt
-ver 3.02
-- Auto /initfiles when activate Write to Disk (deprecated)
-ver 3.01
-- Initial release
-
-************************************************************
+***********************************************************
 */
 
 
@@ -151,8 +138,6 @@ alias twlastfm {
   }
 }
 
-alias xsettings twsettings
-
 alias newline {
   var %twlcount %twtotallines
   var %twlinsert 1
@@ -236,6 +221,22 @@ alias lfmuser {
 alias -l lastfm { 
   return $replace($1,&gt;,>,&lt;,<,&amp;,&) 
 }
+
+alias nowplaying { 
+  if (%last.fm.username == $null) {
+    echo -a Error, no last.fm username found.  Please set your username use: /lfmuser username
+    halt
+  }
+  var %lastfm $+(lastfm,$r(1,9999),$ticks,$network,$cid) 
+  $+(sock,$iif($sock(%lastfm),close,open)) %lastfm ws.audioscrobbler.com 80
+  sockmark %lastfm $+(%last.fm.username,`,$iif($isid,.describe $iif(#,#,$nick),echo -at *),`,6fa70647e42ed7b765e823047273352d,`,$!bvar(&lastfm,1-).text,`,sockwrite -nt %lastfm)
+}
+
+
+/*
+>>>>>>>>> T R I G G E R S <<<<<<<<
+*/
+
 on *:sockread:lastfm*:{ 
   tokenize 96 $sock($sockname).mark 
   var %lf = $sockname
@@ -258,7 +259,7 @@ on *:sockread:lastfm*:{
     write -c %nowplaying %currentsong 
   }
 }
-}  
+
 on *:sockopen:lastfm*:{ 
   tokenize 96 $sock($sockname).mark
   if ($sockerr) { 
@@ -270,22 +271,8 @@ on *:sockopen:lastfm*:{
   $5 Connection: close 
   $5
 }
-alias nowplaying { 
-  if (%last.fm.username == $null) {
-    echo -a Error, no last.fm username found.  Please set your username use: /lfmuser username
-    halt
-  }
-  var %lastfm $+(lastfm,$r(1,9999),$ticks,$network,$cid) 
-  $+(sock,$iif($sock(%lastfm),close,open)) %lastfm ws.audioscrobbler.com 80
-  sockmark %lastfm $+(%last.fm.username,`,$iif($isid,.describe $iif(#,#,$nick),echo -at *),`,6fa70647e42ed7b765e823047273352d,`,$!bvar(&lastfm,1-).text,`,sockwrite -nt %lastfm)
-}
 
-
-/*
->>>>>>>>> T R I G G E R S <<<<<<<<
-*/
-
-ON *:START: { 
+on *:START: { 
   initfiles
 }
 

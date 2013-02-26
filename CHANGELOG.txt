@@ -1,0 +1,19 @@
+- CHANGELOG
+
+ver 3.03
+-- Auto Flush Txt-Outputs every mirc startup.
+-- Flush Txt-Outputs button added.
+-- Separate configurations for Overlay and Txt-Output.
+-- Commands that start with . or / won't display at overlay or txt-output.
+-- Auto clear chatline*.txt at every mirc startup.
+-- Opens a new server window @connecting.
+-- last.fm current song txt-output every 8 secs: $mircdir/scritps/nowplaying.txt
+-- [XSPLIT] Viewers count for Chat Overlay(@title) and txt-output; only works for XSplit since it grabs info from its window title: $mircdir/scritps/viewers.txt
+-- [OBS] Full txt-ouput to a single file; # of lines also affect this file : $mircdir/scripts/fullchatlines.txt
+-- [XSPLIT] # of Lines configuration for txt-output. This will create singlechatline[1-N].txt inside the $mircdir/scripts folder. Start tag and End tag were removed.
+
+ver 3.02
+-- Auto /initfiles when activate Write to Disk. (now deprecated)
+
+ver 3.01
+-- Initial release. Overlay Window + 5 lines txt-output + Auto Advertaising
