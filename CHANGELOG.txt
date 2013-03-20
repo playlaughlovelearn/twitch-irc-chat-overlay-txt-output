@@ -1,5 +1,27 @@
 - CHANGELOG
 
+ver 3.04
+-- Removed olpopup.txt, no need anymore.
+-- Add custom color option for the text in overlay. Values from 0 to 15 are valid:
+0 white
+1 black
+2 blue (navy)
+3 green
+4 red
+5 brown (maroon)
+6 purple
+7 orange (olive)
+8 yellow
+9 light green (lime)
+10 teal (a green/blue cyan)
+11 light cyan (cyan) (aqua)
+12 light blue (royal)
+13 pink (light purple) (fuchsia)
+14 grey
+15 light grey (silver)
+-- Fixed a bug with /twsettings options, where you need to check Overlay otherwise Txt-Output options won't work. Now every toggle is independent
+-- Added a check version of the script. It just notifies you when a new version is released.
+
 ver 3.03
 -- Auto Flush Txt-Outputs every mirc startup.
 -- Flush Txt-Outputs button added.

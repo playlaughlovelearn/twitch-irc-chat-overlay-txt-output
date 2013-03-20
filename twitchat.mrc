@@ -5,18 +5,16 @@ Twitch Chat mIRC Script
 By: bartoruiz (@gmail.com) ||  twitch.tv/gamerfamily
 Original Idea: PhiberOptik & Co.
 
-v 3.03
+v 3.04
 
 ***********************************************************
 */
 
-
-on *:LOAD: {  
+on *:LOAD: {
   initol
   initfiles
   twsettings
 }
-
 
 /*
 >>>>>>>>> A L I A S E S <<<<<<<<
@@ -45,7 +43,7 @@ alias F7 {
       unset %toggleolinter
     }    
 
-    window -Bodaj[10]g[0]w[0]k[0] $+ %toggleolinter +L $+ %toggleoltb %olwintitle %twol.x %twol.y %twol.w %twol.h scripts/olpopup.txt
+    window -Bodaj[10]g[0]w[0]k[0] $+ %toggleolinter +L $+ %toggleoltb %olwintitle %twol.x %twol.y %twol.w %twol.h
     setlayer %oltrans %olwintitle
     if (%twviewersol == 1) {
       updateviewerstimer
@@ -91,7 +89,7 @@ alias closeol {
 }
 
 alias twol {
-  aline -p %olwintitle %twol.line
+  aline -p %twolcolor %olwintitle %twol.line
 }
 
 alias initol {
@@ -131,7 +129,7 @@ alias twad {
 
 alias twlastfm {
   if ($1 == on) {
-    timerlastfm 0 8 nowplaying
+    timerlastfm 0 8 /nowplaying
   }
   if ($1 == off) {
     timerlastfm off
@@ -232,16 +230,39 @@ alias nowplaying {
   sockmark %lastfm $+(%last.fm.username,`,$iif($isid,.describe $iif(#,#,$nick),echo -at *),`,6fa70647e42ed7b765e823047273352d,`,$!bvar(&lastfm,1-).text,`,sockwrite -nt %lastfm)
 }
 
+alias twcheckver {
+  sockclose twver | sockopen twver code.google.com 80
+}
 
 /*
 >>>>>>>>> T R I G G E R S <<<<<<<<
 */
 
+on *:SOCKOPEN:twver: {
+  sockwrite -n twver GET /p/twitch-irc-chat-overlay-txt-output/downloads/list HTTP/1.1
+  sockwrite -n twver Host: code.google.com
+  sockwrite -n twver Connection: Keep-Alive
+  sockwrite -n twver $crlf
+}
+on *:SOCKREAD:twver: {
+  var %t Twitch IRC Chat v
+  sockread %tmp
+  if (%t isin %tmp) {
+    if (%twver < $right($gettok(%tmp,4,32),-1)) {
+      echo -a ************************* 
+      echo -a New Twitch IRC Chat Script $gettok(%tmp,4,32) released. Please visit https://code.google.com/p/twitch-irc-chat-overlay-txt-output/ for details and upgrade instructions
+      echo -a *************************
+      sockclose twver  
+    }
+    sockclose twver
+  }
+}
+
 on *:sockread:lastfm*:{ 
   tokenize 96 $sock($sockname).mark 
   var %lf = $sockname
   if ($sockerr) { 
-    $2 $me is having difficulty reading the data from last.fm! 
+    echo -s Can not connect to last.fm 
     halt 
   } 
   sockread &lastfm 
@@ -263,7 +284,7 @@ on *:sockread:lastfm*:{
 on *:sockopen:lastfm*:{ 
   tokenize 96 $sock($sockname).mark
   if ($sockerr) { 
-    $2 $me is having difficulty connecting to lastfm's website! 
+    echo -s Can not connect to last.fm 
     halt 
   }
   $5 GET $+(/2.0/?method=user.getrecenttracks&limit=1&user=,$1,&api_key=,$3) HTTP/1.1
@@ -274,86 +295,78 @@ on *:sockopen:lastfm*:{
 
 on *:START: { 
   initfiles
+  set %twver 3.04
+  twcheckver
 }
 
 on *:TEXT:*:%twchan: {
-  if (%twchats == 1) {
-    if ($nick == $me) {
-      set %twol.line << $+ $nick $+ >> $1-
-    } 
-    else {
-      set %twol.line < $+ $nick $+ > $1-
-    }
-    if (%twchatstxt == 1) {
-      newline
-    }
-    if ($window(%olwintitle)) {
-      twol
-    }
+  if ($nick == $me) {
+    set %twol.line << $+ $nick $+ >> $1-
+  }
+  else {
+    set %twol.line < $+ $nick $+ > $1-
+  }
+  if (%twchats == 1 && $window(%olwintitle)) {
+    twol
+  }
+  if (%twchatstxt == 1) {
+    newline
   }
 }
 
 
 on *:INPUT:%twchan: {
-  if (%twownmsg == 1) {
-    if ($left($1-,1) != / && $left($1-,1) != .) {
-      set %twol.line << $+ $nick $+ >> $1-
-      if (%twownmsgtxt == 1) {
-        newline
-      }
-      if ($window(%olwintitle)) {
-        twol
-      }
-    }
+  if ($left($1-,1) != / && $left($1-,1) != .) {
+    set %twol.line << $+ $nick $+ >> $1-
+  }
+  if (%twownmsg == 1 && $window(%olwintitle)) {
+    twol
+  }
+  if (%twownmsgtxt == 1) {
+    newline
   }
 }
 
 on *:INPUT:%olwintitle: {
-  msg %twchan $1-
-  if (%twownmsg == 1) {
+  if ($left($1-,1) != / && $left($1-,1) != .) {  
+    msg %twchan $1-
     set %twol.line << $+ $nick $+ >> $1-
-    if (%twownmsgtxt == 1) {
-      newline
-    }
-    if ($window(%olwintitle)) {
-      twol
-    }
+  }
+  if (%twownmsg == 1 && $window(%olwintitle)) {
+    twol
+  }
+  if (%twownmsgtxt == 1) {
+    newline
   }
 }
 
 on *:JOIN:%twchan: {
-  if (%twjoins == 1) {
-    set %twol.line + $nick has joined.
-    if (%twjoinstxt == 1) {
-      newline
-    }
-    if ($window(%olwintitle)) {
-      twol
-    }
+  set %twol.line + $nick has joined
+  if (%twjoins == 1 && $window(%olwintitle)) {
+    twol
+  }
+  if (%twjoinstxt == 1) {
+    newline
   }
 }
 
 on *:PART:%twchan: {
-  if (%twparts == 1) {
-    set %twol.line - $nick has parted.
-    if (%twpartstxt == 1) {
-      newline
-    }
-    if ($window(%olwintitle)) {
-      twol
-    }
+  set %twol.line - $nick has parted
+  if (%twparts == 1 && $window(%olwintitle)) {
+    twol
   }
+  if (%twpartstxt == 1) {
+    newline
+  }    
 }
 
 on *:ACTION:*:%twchan: {
-  if (%twact == 1) {
-    set %twol.line * $nick $1-
-    if (%twacttxt == 1) {
-      newline
-    }
-    if ($window(%olwintitle)) {
-      twol
-    }
+  set %twol.line * $nick $1-
+  if (%twact == 1 && $window(%olwintitle)) {
+    twol
+  }
+  if (%twacttxt == 1) {
+    newline
   }
 }
 
@@ -439,7 +452,7 @@ alias olsettings {
 
 dialog twsettings {
   title "Twitch IRC Chat Settings"
-  size -1 -1 319 497
+  size -1 -1 319 538
   option pixels
   edit "username", 1, 21 50 113 20, autohs
   edit "password", 24, 161 50 121 20, pass autohs
@@ -450,39 +463,41 @@ dialog twsettings {
   check "", 8, 48 280 19 17
   check "", 9, 48 305 18 17
   check "", 12, 48 330 21 17
-  link "Donate", 15, 18 465 40 17
-  button "Apply", 20, 224 459 79 25, ok
+  link "Donate", 15, 21 511 40 16
+  button "Apply", 20, 227 505 79 24, ok
   edit "120", 22, 141 138 32 20
   text "secs", 23, 176 141 37 17
   text "twitch username", 19, 21 32 104 16
   text "twitch password", 2, 161 32 109 16
-  button "Chat Overlay (F7)", 10, 103 459 108 25
+  button "Chat Overlay (F7)", 10, 106 505 108 24
   check "enable", 11, 227 140 60 20
   box "Auto Advertising", 16, 12 96 295 76
   box "twitch.tv", 17, 12 8 295 72
-  box "Overlay and Txt-Output Options", 5, 12 190 295 261
-  text "-- Chats", 13, 168 232 50 16
-  box "Txt-Output", 14, 87 212 67 196
-  check "", 18, 114 230 22 20
-  box "Overlay", 21, 28 212 52 196
-  check "", 25, 114 280 21 20
-  text "-- User Joins", 26, 168 282 79 16
-  text "-- User Leaves", 27, 168 307 76 16
-  check "", 28, 114 305 16 20
-  text "-- Own Chat", 29, 168 257 59 16
-  check "", 30, 114 255 20 20
-  text "-- User Actions /me", 31, 168 332 105 16
-  check "", 32, 114 330 21 20
+  box "Overlay and Txt-Output Options", 5, 12 190 295 303
+  text "-- Chats", 13, 172 232 50 16
+  box "Txt-Output", 14, 97 212 71 271
+  check "", 18, 124 230 22 20
+  box "Overlay", 21, 27 212 67 271
+  check "", 25, 124 280 21 20
+  text "-- User Joins", 26, 172 282 79 16
+  text "-- User Leaves", 27, 172 307 76 16
+  check "", 28, 124 305 16 20
+  text "-- Own Chat", 29, 172 257 59 16
+  check "", 30, 124 255 20 20
+  text "-- User Actions /me", 31, 172 332 105 16
+  check "", 32, 124 330 21 20
   check "", 33, 48 355 20 20
-  text "-- Current Viewers, X-Split", 34, 168 357 128 18
-  check "", 35, 114 380 19 20
-  text "-- last.fm current song", 36, 169 382 117 18
-  button "Flush TXTs", 37, 167 417 72 23
-  check "", 38, 114 355 19 20
-  edit "", 39, 127 419 26 21
-  text "# lines:", 40, 86 424 39 16
+  text "-- Current Viewers, X-Split", 34, 172 357 128 18
+  check "", 35, 124 380 19 20
+  text "-- last.fm current song", 36, 173 382 117 18
+  button "Flush TXTs", 37, 100 455 64 23
+  check "", 38, 124 355 19 20
+  edit "", 39, 120 428 25 20
+  text "# lines:", 40, 114 410 39 16
+  text "# color:", 41, 41 410 43 16
+  edit "", 42, 47 428 25 20
+  text "-- # color for the overlay accept values from 0->15; # lines for the files accept values from 1->99", 43, 172 410 128 52, center
 }
-
 
 on *:DIALOG:twsettings:sclick:18:{
   if ($did(twsettings,18).state == 1) { set %twchatstxt 1 }
@@ -599,6 +614,15 @@ on *:dialog:twsettings:edit:39: {
   }
 }
 
+on *:dialog:twsettings:edit:42: { 
+  if ($did(twsettings,42).text !isnum) {
+    echo -a Error: Only numbers (color) can be entered here.
+  }
+  else {
+    set %twolcolor $did(twsettings,42).text 
+  }
+}
+
 on *:dialog:twsettings:edit:3: { 
   set %twad $did(twsettings,3).text 
 }
@@ -632,7 +656,17 @@ on *:DIALOG:twsettings:sclick:15:{
 
 on *:dialog:twsettings:init:0: {
   if (%twuser == $null) {
-    set %twuser username 
+    set %twuser username
+    set %twchats 1
+    set %twownmsg 1
+    set %twjoins 1
+    set %twparts 1
+    set %twact 1
+    set %twchatstxt 1
+    set %twownmsgtxt 1
+    set %twjoinstxt 1
+    set %twpartstxt 0
+    set %twacttxt 1
   }
   if (%twad == $null) {
     set %twad Your ad here!
@@ -643,11 +677,15 @@ on *:dialog:twsettings:init:0: {
   if (%twtotallines == $null) {
     set %twtotallines 5
   }
+  if (%twolcolor == $null) {
+    set %twolcolor 1
+  }
 
   did -ra twsettings 1 %twuser
   did -ra twsettings 3 %twad
   did -ra twsettings 22 %twaddelay
   did -ra twsettings 39 %twtotallines
+  did -ra twsettings 42 %twolcolor
   if (%twchats == 1) { did -c twsettings 6 }
   if (%twchats == 0) { did -u twsettings 6 }
   if (%twownmsg == 1) { did -c twsettings 7 }
@@ -660,8 +698,6 @@ on *:dialog:twsettings:init:0: {
   if (%twadenable == 0) { did -u twsettings 11 }
   if (%twact == 1) { did -c twsettings 12 }
   if (%twact == 0) { did -u twsettings 12 }
-  if (%writedisk == 1) { did -c twsettings 13 }
-  if (%writedisk == 0) { did -u twsettings 13 }
   if (%twviewerstxt == 1) { did -c twsettings 38 }
   if (%twviewerstxt == 0) { did -u twsettings 38 }
   if (%twviewersol == 1) { 
@@ -690,6 +726,7 @@ alias twsettings {
   }
 }
 
-Menu Channel,Status,Menubar,Query {
-  Twitch IRC Chat Settings:twsettings
+Menu * {
+  Twitch IRC Chat Settings: twsettings
+  Overlay Settings: olsettings
 }
