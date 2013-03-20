@@ -5,7 +5,11 @@ http://i.imgur.com/vfv6gvV.png
 
   I'm the -do it once and do it right- kind of guy, so it took me quite of time but in the end I guess the script surpass my initial expectations and I guess is easy to setup. If you like my work:
   * Optionally, you are welcome to invite me a beer.
+<<<<<<< HEAD
   * Forcefully, follow my twitch channel http://twitch.tv/gamerfamily
+=======
+  * Forcefully, follow my twitch channel twitch.tv/gamerfamily
+>>>>>>> origin/master
   * Both :D
 
 ===Main Features===
