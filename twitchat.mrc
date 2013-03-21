@@ -300,11 +300,13 @@ on *:START: {
 }
 
 on *:TEXT:*:%twchan: {
-  if ($nick == $me) {
-    set %twol.line << $+ $nick $+ >> $1-
-  }
-  else {
-    set %twol.line < $+ $nick $+ > $1-
+  if (%twchats == 1 || %twchatstxt == 1) {
+    if ($nick == $me) {
+      set %twol.line << $+ $nick $+ >> $1-
+    }
+    else {
+      set %twol.line < $+ $nick $+ > $1-
+    }
   }
   if (%twchats == 1 && $window(%olwintitle)) {
     twol
@@ -316,8 +318,10 @@ on *:TEXT:*:%twchan: {
 
 
 on *:INPUT:%twchan: {
-  if ($left($1-,1) != / && $left($1-,1) != .) {
-    set %twol.line << $+ $nick $+ >> $1-
+  if (%twownmsg == 1 || %twownmsgtxt == 1) {
+    if ($left($1-,1) != / && $left($1-,1) != .) {
+      set %twol.line << $+ $nick $+ >> $1-
+    }
   }
   if (%twownmsg == 1 && $window(%olwintitle)) {
     twol
@@ -328,9 +332,11 @@ on *:INPUT:%twchan: {
 }
 
 on *:INPUT:%olwintitle: {
-  if ($left($1-,1) != / && $left($1-,1) != .) {  
-    msg %twchan $1-
-    set %twol.line << $+ $nick $+ >> $1-
+  if (%twownmsg == 1 || %twownmsgtxt == 1) {
+    if ($left($1-,1) != / && $left($1-,1) != .) {  
+      msg %twchan $1-
+      set %twol.line << $+ $nick $+ >> $1-
+    }
   }
   if (%twownmsg == 1 && $window(%olwintitle)) {
     twol
@@ -341,7 +347,9 @@ on *:INPUT:%olwintitle: {
 }
 
 on *:JOIN:%twchan: {
-  set %twol.line + $nick has joined
+  if (%twjoins == 1 || %twjoinstxt == 1) {
+    set %twol.line + $nick has joined
+  }
   if (%twjoins == 1 && $window(%olwintitle)) {
     twol
   }
@@ -351,7 +359,9 @@ on *:JOIN:%twchan: {
 }
 
 on *:PART:%twchan: {
-  set %twol.line - $nick has parted
+  if (%twparts == 1 || %twpartstxt == 1) {
+    set %twol.line - $nick has parted
+  }
   if (%twparts == 1 && $window(%olwintitle)) {
     twol
   }
@@ -361,7 +371,9 @@ on *:PART:%twchan: {
 }
 
 on *:ACTION:*:%twchan: {
-  set %twol.line * $nick $1-
+  if (%twact == 1 || %twacttxt == 1) {
+    set %twol.line * $nick $1-
+  }
   if (%twact == 1 && $window(%olwintitle)) {
     twol
   }
